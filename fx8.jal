@@ -49,7 +49,7 @@ end function
 
 
 const sbyte*FXHALF fx_tensints[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1}
-const sbyte*FXHALF fx_tensfracs[] = {429496729, 42949672, 4294967, 429496, 42949, 4294, 429, 42, 4}
+const sbyte*FXHALF fx_tensfracs[] = {429496730, 42949673, 4294967, 429497, 42950, 4294, 429, 43, 4}
 
 
 procedure format_dword_decfrac(volatile byte out device, dword in data) is
