@@ -1,0 +1,28 @@
+-- zerocross.jal
+
+
+VAR BYTE*6 zero_crossing_count = 0
+
+VAR SBYTE*2 heater_accum = 0x0000
+VAR SBYTE*2 heater_setting = 0x1111
+
+pin_A1_direction = output
+
+alias heater_switch is pin_A1
+
+heater_switch = off
+
+PROCEDURE zero_crossing_isr IS
+    -- do the breshenham thing
+    IF heater_accum < heater_setting THEN
+        heater_switch = 1
+    ELSE
+        heater_switch = 0
+    END IF
+    heater_accum = heater_accum - heater_setting
+    
+    -- increment the zero crossing counter
+    zero_crossing_count = zero_crossing_count + 1
+END PROCEDURE
+
+

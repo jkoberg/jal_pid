@@ -1,0 +1,134 @@
+
+const byte FXWIDTH = 8
+
+const byte FXDOUBLE = 2*FXWIDTH
+const byte FXHALF = FXWIDTH/2
+
+const byte FXWORDSIZE = (FXWIDTH*8)
+
+if !defined(FXFRACBITS) then
+    const byte FXFRACBITS = (FXWORDSIZE/2)
+end if
+
+const byte FXINTBITS = (FXWORDSIZE - FXFRACBITS)
+
+
+
+function word_to_fx(sbyte*FXHALF in int) return sbyte*FXWIDTH is
+    pragma inline
+    return ((sbyte*FXWIDTH(int)) << FXFRACBITS)
+end function
+
+
+function trunc_fx(sbyte*FXWIDTH in fx_point) return sbyte*FXHALF  is
+    pragma inline
+    return (sbyte*FXHALF(fx_point >> FXFRACBITS))
+end function
+
+
+function round_fx(sbyte*FXWIDTH in fx_point) return sbyte*FXHALF  is
+    if (fx_point & (1 << (FXFRACBITS-1) )) >0  then    -- >= 0.5
+      return ( sbyte*FXHALF(fx_point >> FXFRACBITS) +1)
+   else
+      return ( sbyte*FXHALF(fx_point >> FXFRACBITS))
+   end  if
+end function
+
+
+
+function mult_fx(sbyte*FXDOUBLE in a, sbyte*FXDOUBLE in b) return sbyte*FXWIDTH is
+   return sbyte*FXWIDTH((a * b) >> FXFRACBITS) -- fix point
+end function
+
+
+
+function div_fx(sbyte*FXDOUBLE in a, sbyte*FXDOUBLE in b) return sbyte*FXWIDTH  is
+    return sbyte*FXWIDTH( ((a<<FXWORDSIZE) / b) >> FXFRACBITS)
+end function
+
+
+
+const sbyte*4 fx_tensints[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1}
+const sbyte*4 fx_tensfracs[] = {429496729, 42949672, 4294967, 429496, 42949, 4294, 429, 42, 4}
+
+procedure format_dword_decfrac(volatile byte out device, dword in data) is
+    var byte pos = 0
+    var byte outch
+    device = "."
+    for 8 using pos loop
+        outch = "0"
+        while data >= fx_tensfracs[pos] loop
+            data = data - fx_tensfracs[pos]
+            outch = outch + 1
+        end loop
+        device = outch
+    end loop
+end procedure
+
+procedure format_fx8(volatile byte out device, sbyte*8 in data) is
+    format_sdword_dec(device, data>>32, 10, 0)
+    format_dword_decfrac(device, (data & 0xffffffff))
+end procedure
+
+
+procedure format_fixed_to_ascii(volatile byte out device, sbyte*8 in x) is
+    var sbyte*8 temp = 0
+    var bit leader = 1
+    var byte idx
+    var byte c
+    for 10 using idx loop
+        c = "0"
+        temp = fx_tensints[idx]
+        temp = temp << 32
+        while x >= temp  loop
+            x = x - temp 
+            c = c + 1
+        end loop
+        if leader then
+            if c == "0" then
+                c = " "
+            else
+                leader = 0
+            end if
+        end if
+        device = c
+    end loop
+    device = "." -- char @ 10
+    for 8 using idx loop
+        c = "0"
+        temp = fx_tensfracs[idx]
+        while x >= temp  loop
+            x = x - temp 
+            c = c + 1
+        end loop
+        device = c
+    end loop
+end procedure
+
+function char_is_digit(byte in char) return bit is
+    if (char < "0") | (char > "9") then
+            return 0
+    else
+        return 1
+    end if
+end function
+
+function read_fixed_from_string(byte in string[18]) return sbyte*8 is
+    var byte digitpos
+    var sbyte*8 temp = 0 
+    for 10 using digitpos loop
+        if !!char_is_digit(string[digitpos]) then
+            return 0
+        end if
+        temp = temp + (fx_tensints[digitpos] * (string[digitpos]-48))
+    end loop
+    for 8 using digitpos loop
+        if !!char_is_digit(string[digitpos])  then
+            return 0
+        end if
+        temp = temp + (fx_tensfracs[digitpos] * (string[digitpos]-48))
+    end loop
+    return temp
+end function
+
+

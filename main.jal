@@ -1,0 +1,81 @@
+
+include 18f2553
+
+-- Compiler directives
+pragma target CLOCK    48_000_000  -- CPU frequency
+--
+pragma target OSC      XT_PLL      -- XT crystal or resonator
+--                                     and using PLL
+pragma target PLLDIV   P1          -- reduce OSC 4/1 = 4 MHz for PLL input
+pragma target CPUDIV   P1          -- CPU freq. from PLL(96)/2 -> 48 MHz
+--                                    (without PLL: CPU freq. = OSC freq.)
+pragma target USBPLL   F48MHZ      -- USB clock from PLL module
+pragma target FCMEN    DISABLED    -- no fail-safe clock monitoring
+pragma target IESO     DISABLED    -- no int/ext clock switchover
+pragma target BROWNOUT DISABLED    -- no brownout detection
+pragma target VREGEN   ENABLED     -- enable USB voltage regulator
+--                                    (when no external regulator at Vusb)
+pragma target WDT      DISABLED    -- no watchdog
+pragma target XINST    DISABLED    -- not supported by JalV2
+pragma target DEBUG    DISABLED    -- no debugging
+pragma target LVP      DISABLED    -- no Low Voltage Programming
+pragma target MCLR     EXTERNAL    -- reset externally
+
+
+
+include print
+include format
+include usb_serial
+
+include clock
+include zerocross
+include fx8
+
+var byte input_buffer[40]
+
+
+OSCCON_SCS = 0b00                  -- select primary clock source
+enable_digital_io()                -- make all pins digital I/O
+
+pin_A0_direction = output
+alias led is pin_A0
+
+
+
+led = on
+
+
+_usec_delay(100_000) 
+
+usb_serial_init()
+
+forever loop
+    var byte ch
+    usb_serial_flush()
+    if( usb_cdc_line_status() !=  0x00 ) then
+        -- port has been opened by host app
+        led = on
+        if usb_serial_read( ch ) then
+            usb_serial_data = ch -- output it
+            
+            if ch == "?" then
+                
+                
+            elsif ch == "t" then
+                print_time()
+                
+            elsif ch == 10 | ch == 13 then
+                    var byte inp_ptr = 0
+                    for count(input_buffer) using inp_ptr loop
+                        input_buffer[inp_ptr] = 0
+                    end loop
+            end if
+        end if
+        timer_isr()
+    else
+        -- port is closed.
+        led = off
+    end if
+end loop
+
+

@@ -1,0 +1,82 @@
+
+
+
+VAR BYTE*8 clock_absolute = 0 -- range 0 - 2**64
+VAR BYTE*2 clock_millisecond = 0  -- range 0 - 999
+VAR BYTE clock_second = 0  -- range 0 - 59 
+VAR BYTE clock_minute = 0  -- range 0 - 59
+VAR BYTE clock_hour = 12  -- range 0 - 23
+VAR BYTE clock_weekday = 3  -- range 0 - 6 sun - sat
+VAR BYTE*2 clock_doy = 73
+VAR BYTE*3 clock_mjd = 56000  -- range 0 - 365
+VAR BYTE*2 clock_year = 2012 -- range 1800 - 2**16
+
+
+
+function is_leap_year(byte*2 in year) return bit is
+    if (year & 0b11) == 0b00 then -- divisible by 4.
+        if (year % 100) == 0 then -- divisible by 100
+            if (year % 400) != 0 then -- not divisible by 400
+                return true
+            end if
+        end if
+    end if
+    return false
+end function
+
+function this_year_len(byte*2 in year) return byte*2 is
+    if is_leap_year(year) then
+        return 366
+    else
+        return 365
+    end if
+end function
+
+
+
+PROCEDURE timer_isr IS
+    clock_millisecond = clock_millisecond + 1
+    clock_absolute = clock_absolute + 1
+    IF clock_millisecond > 999 THEN
+        clock_millisecond = 0
+        clock_second = clock_second + 1
+        IF clock_second > 59 THEN
+            clock_second = 0
+            clock_minute = clock_minute + 1
+            IF clock_minute > 59 THEN
+                clock_minute = 0
+                clock_hour = clock_hour + 1
+                IF clock_hour > 23 THEN
+                    clock_hour = 0
+                    clock_mjd = clock_mjd + 1
+                    clock_weekday = clock_weekday + 1
+                    IF clock_weekday > 6 THEN
+                        clock_weekday = 0
+                    END IF
+                    clock_doy = clock_doy + 1
+                    if clock_doy > (this_year_len(clock_year)) then
+                        clock_doy = 1
+                        clock_year = clock_year + 1
+                    end if
+                END IF
+            END IF
+        END IF
+    END IF
+END PROCEDURE
+
+
+procedure print_time is
+    -- 2012-000 Wed 00:00:00.000
+    --print_string("MJD")
+    --format_dword_dec(usb_serial_data, clock_mjd, 6, 0)
+    --usb_serial_data = " "
+    format_word_dec(usb_serial_data, clock_year, 4, 0)
+    usb_serial_data = "-"
+    format_word_dec(usb_serial_data, clock_doy, 3, 0)
+    usb_serial_data = " "
+    format_time_hms(usb_serial_data, clock_hour, clock_minute, clock_second)
+    usb_serial_data = "."
+    format_word_dec(usb_serial_data, clock_millisecond, 3,0)
+end procedure
+
+
