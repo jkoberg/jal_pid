@@ -86,10 +86,11 @@ function strcmp(byte in short[], byte in long[]) return bit is
 end function
 
 procedure process_cli is
+    
     if strcmp(cmd_time, input_buffer) then
         print_time()
     end if
-    clear_buffer()
+    
 end procedure
 
 
@@ -117,6 +118,7 @@ forever loop
             elsif ch == 10 | ch == 13 then
                 -- enter
                 process_cli()
+                clear_buffer()
                 bufpos = 0
                 usb_serial_data = 13 
                 usb_serial_data = 10 
