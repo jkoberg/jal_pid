@@ -7,21 +7,26 @@ VAR BYTE clock_second = 0  -- range 0 - 59
 VAR BYTE clock_minute = 0  -- range 0 - 59
 VAR BYTE clock_hour = 12  -- range 0 - 23
 VAR BYTE clock_weekday = 3  -- range 0 - 6 sun - sat
-VAR BYTE*2 clock_doy = 73
-VAR BYTE*3 clock_mjd = 56000  -- range 0 - 365
+VAR BYTE*2 clock_doy = 73 -- range 0 - 366 
+VAR BYTE*3 clock_mjd = 56000  
 VAR BYTE*2 clock_year = 2012 -- range 1800 - 2**16
 
 
 
 function is_leap_year(byte*2 in year) return bit is
     if (year & 0b11) == 0b00 then -- divisible by 4.
-        if (year % 100) == 0 then -- divisible by 100
-            if (year % 400) != 0 then -- not divisible by 400
+        if (year % 100) == 0 then -- unless divisible by 100
+            if (year % 400) == 0 then -- unless divisible by 400
                 return true
+            else
+                return false
             end if
+        else
+            return true
         end if
+    else
+        return false
     end if
-    return false
 end function
 
 function this_year_len(byte*2 in year) return byte*2 is
