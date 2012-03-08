@@ -48,8 +48,9 @@ end function
 
 
 
-const sbyte*4 fx_tensints[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1}
-const sbyte*4 fx_tensfracs[] = {429496729, 42949672, 4294967, 429496, 42949, 4294, 429, 42, 4}
+const sbyte*FXHALF fx_tensints[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1}
+const sbyte*FXHALF fx_tensfracs[] = {429496729, 42949672, 4294967, 429496, 42949, 4294, 429, 42, 4}
+
 
 procedure format_dword_decfrac(volatile byte out device, dword in data) is
     var byte pos = 0
@@ -65,14 +66,15 @@ procedure format_dword_decfrac(volatile byte out device, dword in data) is
     end loop
 end procedure
 
-procedure format_fx8(volatile byte out device, sbyte*8 in data) is
-    format_sdword_dec(device, data>>32, 10, 0)
-    format_dword_decfrac(device, (data & 0xffffffff))
+
+procedure format_fx8(volatile byte out device, sbyte*FXWIDTH in data) is
+    format_sdword_dec(device, data>>FXFRACBITS, 10, 0)
+    format_dword_decfrac(device, data)
 end procedure
 
 
-procedure format_fixed_to_ascii(volatile byte out device, sbyte*8 in x) is
-    var sbyte*8 temp = 0
+procedure format_fx8_to_ascii(volatile byte out device, sbyte*FXWIDTH in x) is
+    var sbyte*FXWIDTH temp = 0
     var bit leader = 1
     var byte idx
     var byte c
@@ -113,9 +115,10 @@ function char_is_digit(byte in char) return bit is
     end if
 end function
 
-function read_fixed_from_string(byte in string[18]) return sbyte*8 is
+
+function read_fx8_from_string(byte in string[18]) return sbyte*FXWIDTH is
     var byte digitpos
-    var sbyte*8 temp = 0 
+    var sbyte*FXWIDTH temp = 0 
     for 10 using digitpos loop
         if !!char_is_digit(string[digitpos]) then
             return 0
