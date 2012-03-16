@@ -31,6 +31,17 @@ include clock
 include zerocross
 include fx8
 
+
+include pid
+
+
+
+const timer0_isr_rate = 1000
+const DELAY_SLOTS = 3
+include timer0_isr_interval
+timer0_isr_init()
+
+
 var byte input_buffer[40]
 
 
@@ -72,7 +83,10 @@ procedure print_buf(volatile byte out device) is
 end procedure
 
 
+
+
 const byte cmd_time[] = "time"
+const byte cmd_demo[] = "demo"
 
 function strcmp(byte in short[], byte in long[]) return bit is
     var byte idx = 0
@@ -85,43 +99,69 @@ function strcmp(byte in short[], byte in long[]) return bit is
     return true
 end function
 
+
+
+procedure print_demo(volatile byte out device) is
+    var sbyte*FXWIDTH initial
+    var byte idx
+    initial = word_to_fx(500000000)
+    for 18 using idx loop
+        format_fx8(device, initial)
+        device = 13
+        device = 10
+        initial = div_fx(initial, fx_ten)
+    end loop
+end procedure
+
 procedure process_cli is
     
     if strcmp(cmd_time, input_buffer) then
         print_time()
     end if
+    if strcmp(cmd_demo, input_buffer) then
+        print_demo(usb_serial_data)
+    end if
     
 end procedure
-
-
 
 clear_buffer()
 
 var byte bufpos = 0
 var byte ch
 
+const byte cr = 13
+const byte lf = 10
+const byte bs = 8
+
+procedure print_status(volatile byte out device) is
+    print_time()
+    format_fx8(device, output_value) 
+    format_fx8(device, now() ) 
+    format_fx8(device, last_error_p) 
+end procedure
+
 forever loop
     usb_serial_flush()
     if( usb_cdc_line_status() !=  0x00 ) then
         -- port has been opened by host app
-        led = on
+        led = on        
         if usb_serial_read( ch ) then
-            if ch == 8 then
+            if ch == bs then
                 -- backspace
                 if bufpos > 0 then
                     bufpos = bufpos - 1
                 end if                
                 input_buffer[bufpos] = " "
-                usb_serial_data = 8 
+                usb_serial_data = bs 
                 usb_serial_data = " "
-                usb_serial_data = 8 
-            elsif ch == 10 | ch == 13 then
+                usb_serial_data = bs 
+            elsif ch == cr | ch == lf then
                 -- enter
                 process_cli()
                 clear_buffer()
                 bufpos = 0
-                usb_serial_data = 13 
-                usb_serial_data = 10 
+                usb_serial_data = cr 
+                usb_serial_data = lf 
             else
                 -- self-insert
                 if bufpos < (count(input_buffer)) then
@@ -131,9 +171,29 @@ forever loop
                 end if
             end if
         end if
+        if check_delay(2) then -- 10s interrupt for status
+            set_delay(2, 10000)
+            print_status(usb_serial_data)
+            usb_serial_data = cr
+            usb_serial_data = lf
+        end if
     else
         -- port is closed.
         led = off
+    end if
+    if check_delay(0) then
+        set_delay(0, 20)  -- 50hz interrupt for clock
+        timer_isr()
+    end if
+    if check_delay(1) then -- 1hz interrupt for PID
+        set_delay(1, 1000)
+        usb_serial_data = "+"
+        update_pid(word_to_fx(100))
+        
+        usb_serial_data = bs
+        usb_serial_data = " "
+        
+        usb_serial_data = bs
     end if
 end loop
 

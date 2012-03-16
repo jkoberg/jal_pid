@@ -18,19 +18,38 @@ function is_leap_year(byte*2 in year) return bit is
         if (year % 100) == 0 then -- unless divisible by 100
             if (year % 400) == 0 then -- unless divisible by 400
                 return true
-            else
-                return false
             end if
         else
             return true
         end if
-    else
-        return false
     end if
+    return false
 end function
 
-function this_year_len(byte*2 in year) return byte*2 is
-    if is_leap_year(year) then
+
+const byte*2 leapyears[] = {
+    2012,    2016,    2020,    2024,
+    2028,    2032,    2036,    2040,
+    2044,    2048,    2052,    2056,
+    2060,    2064,    2068,    2072,
+    2076,    2080,    2084,    2088,
+    2092,    2096,    2104,    2108
+    };
+
+function clock_leap_year(byte*2 in year) return bit is
+    var byte idx
+    for count(leapyears) using idx loop
+        if year == leapyears[idx] then
+            return true
+        end if
+    end loop
+    return false
+end function
+
+
+
+function clock_year_len(byte*2 in year) return byte*2 is
+    if clock_leap_year(year) then
         return 366
     else
         return 365
@@ -40,8 +59,8 @@ end function
 
 
 PROCEDURE timer_isr IS
-    clock_millisecond = clock_millisecond + 1
-    clock_absolute = clock_absolute + 1
+    clock_millisecond = clock_millisecond + 20
+    clock_absolute = clock_absolute + 20
     IF clock_millisecond > 999 THEN
         clock_millisecond = 0
         clock_second = clock_second + 1
@@ -59,7 +78,7 @@ PROCEDURE timer_isr IS
                         clock_weekday = 0
                     END IF
                     clock_doy = clock_doy + 1
-                    if clock_doy > (this_year_len(clock_year)) then
+                    if clock_doy > (clock_year_len(clock_year)) then
                         clock_doy = 1
                         clock_year = clock_year + 1
                     end if
@@ -81,7 +100,7 @@ procedure print_time is
     usb_serial_data = " "
     format_time_hms(usb_serial_data, clock_hour, clock_minute, clock_second)
     usb_serial_data = "."
-    format_word_dec(usb_serial_data, clock_millisecond, 3,0)
+    format_word_dec(usb_serial_data, clock_millisecond, 3, 0)
 end procedure
 
 

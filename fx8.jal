@@ -49,14 +49,14 @@ end function
 
 
 const sbyte*FXHALF fx_tensints[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1}
-const sbyte*FXHALF fx_tensfracs[] = {429496730, 42949673, 4294967, 429497, 42950, 4294, 429, 43, 4}
+const sbyte*FXHALF fx_tensfracs[] = {429496729, 42949672, 4294967, 429496, 42949, 4294, 429, 42, 4}
 
 
 procedure format_dword_decfrac(volatile byte out device, dword in data) is
     var byte pos = 0
     var byte outch
     device = "."
-    for 8 using pos loop
+    for 9 using pos loop
         outch = "0"
         while data >= fx_tensfracs[pos] loop
             data = data - fx_tensfracs[pos]
@@ -68,44 +68,11 @@ end procedure
 
 
 procedure format_fx8(volatile byte out device, sbyte*FXWIDTH in data) is
-    format_sdword_dec(device, data>>FXFRACBITS, 10, 0)
-    format_dword_decfrac(device, data)
+    format_sdword_dec(device, sdword(data>>FXFRACBITS), 10, 0)
+    format_dword_decfrac(device, dword(data))
 end procedure
 
 
-procedure format_fx8_to_ascii(volatile byte out device, sbyte*FXWIDTH in x) is
-    var sbyte*FXWIDTH temp = 0
-    var bit leader = 1
-    var byte idx
-    var byte c
-    for 10 using idx loop
-        c = "0"
-        temp = fx_tensints[idx]
-        temp = temp << 32
-        while x >= temp  loop
-            x = x - temp 
-            c = c + 1
-        end loop
-        if leader then
-            if c == "0" then
-                c = " "
-            else
-                leader = 0
-            end if
-        end if
-        device = c
-    end loop
-    device = "." -- char @ 10
-    for 8 using idx loop
-        c = "0"
-        temp = fx_tensfracs[idx]
-        while x >= temp  loop
-            x = x - temp 
-            c = c + 1
-        end loop
-        device = c
-    end loop
-end procedure
 
 function char_is_digit(byte in char) return bit is
     if (char < "0") | (char > "9") then
