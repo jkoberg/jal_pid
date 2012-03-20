@@ -58,9 +58,11 @@ end function
 
 
 
-PROCEDURE timer_isr IS
-    clock_millisecond = clock_millisecond + 20
-    clock_absolute = clock_absolute + 20
+
+PROCEDURE timer0_isr_wedge() IS
+    pragma inline
+    clock_millisecond = clock_millisecond + 1
+    clock_absolute = clock_absolute + 1
     IF clock_millisecond > 999 THEN
         clock_millisecond = 0
         clock_second = clock_second + 1

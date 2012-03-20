@@ -17,18 +17,26 @@ var sbyte*FXWIDTH output_value          = 0
 var sbyte*FXWIDTH last_last_error_d_f   = 0
 var sbyte*FXWIDTH last_error_d_f        = 0
 var sbyte*FXWIDTH last_error_p          = 0
-var sbyte*FXWIDTH lasttime              = 0
 
 
 function now return sbyte*FXWIDTH is
 	return div_fx(sbyte*FXWIDTH(clock_absolute) << FXFRACBITS, word_to_fx(1000))
 end function
 
+
+var sbyte*FXWIDTH lasttime              = now()
+
 function get_process_value return sbyte*FXWIDTH is
 	return word_to_fx(98)
 end function
 
-procedure update_pid (sbyte*FXWIDTH in new_setpoint) is
+procedure crlf(volatile byte out device) is
+    pragma inline
+    device = 13
+    device = 10
+end procedure
+
+procedure update_pid (volatile byte out device, sbyte*FXWIDTH in new_setpoint) is
 	-- ideas from http://www.flightgear.org/Docs/XMLAutopilot/node3.html#SECTION00031000000000000000
 	var sbyte*FXWIDTH curtime = now()
 	var sbyte*FXWIDTH curval = get_process_value()
@@ -37,15 +45,17 @@ procedure update_pid (sbyte*FXWIDTH in new_setpoint) is
 	var sbyte*FXWIDTH d_factor2 = d_factor1 + fx_one
 	var sbyte*FXWIDTH d_factor3 = div_fx(d_factor1, d_factor2)
 	var sbyte*FXWIDTH error = new_setpoint - curval
-	var sbyte*FXWIDTH error_p = mult_fx(beta, new_setpoint) - curval
-	var sbyte*FXWIDTH error_d = mult_fx(gamma, new_setpoint) - curval
+	var sbyte*FXWIDTH error_p = mult_fx(beta, (new_setpoint - curval))
+	var sbyte*FXWIDTH error_d = mult_fx(gamma, (new_setpoint - curval))
 	var sbyte*FXWIDTH error_d_f = (div_fx(last_error_d_f, d_factor2) + 
-                                mult_fx(error_d, d_factor3))
+                                mult_fx(error_d, d_factor3))  
+                                
     var sbyte*FXWIDTH output_delta = mult_fx(proportional_constant,
-                                        ( (error_p - last_error_p)  
+                                        
+                                        (error_p - last_error_p)
                                         
                                         + mult_fx( 
-                                            div_fx( delta_t,integration_time),
+                                            div_fx( delta_t, integration_time),
                                             error
                                             )
                                             
@@ -60,8 +70,10 @@ procedure update_pid (sbyte*FXWIDTH in new_setpoint) is
                                                 + last_last_error_d_f
                                                 )
                                                 )
-                                            )
+                                            
                                         )
+                                        
+    
 	last_last_error_d_f = last_error_d_f
 	last_error_d_f = error_d_f
 	last_error_p = error_p
