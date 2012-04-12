@@ -1,0 +1,238 @@
+
+-- Check parameter values for corruption
+-- If corrupt, go to idle state
+-- If not corrupt, read them and go to running state
+
+
+-- Idle state: 
+
+--
+
+include 18f252
+pragma target wdt disabled
+--pragma target osc INTOSC_NOCLKOUT
+pragma target clock 8_000_000
+
+const usart_hw_serial = true	-- true = RS232, false = SPI
+const serial_hw_baudrate = 9600
+include serial_hardware
+serial_hw_init()
+serial_hw_write("!")
+serial_hw_write("\n")
+
+include format
+
+
+function julery_isqrt (dword in val) return dword  is
+    var dword temp, g=0, b = 0x8000, bshift = 15
+    repeat
+        temp = ((( g << 1) + b) << bshift)
+        bshift = bshift - 1 
+        if (val >= (temp)) then
+            g = g + b
+            val = val - temp
+        end if
+        b = b >> 1
+    until (b==0)
+    return g
+end function
+
+
+function i2f4_add (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    pragma inline
+	return j + k
+end function
+
+
+function i2f4_sub (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    pragma inline
+	return j - k
+end function
+
+
+function i2f4_mul (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+	var sbyte*12 product
+    var byte p[12] at product
+    var sbyte*6 outval
+    var byte o[6] at outval
+    product = sbyte*12(j) * sbyte*12(k)
+    o[0] = p[4] 
+    o[1] = p[5] 
+    o[2] = p[6] 
+    o[3] = p[7] 
+    o[4] = p[8] 
+    o[5] = p[9]
+	return outval
+end function
+
+function i2f4_div (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    var byte jb[6] at j
+    
+    var sbyte*12 a = 0
+    var byte ab[12] at a
+    
+    var sbyte*12 outval
+    var byte ob[12] at outval
+
+    var sbyte*6 retval
+    var byte rb[6] at retval 
+    
+    ab[6] = jb[0]
+    ab[7] = jb[1]
+    ab[8] = jb[2]
+    ab[9] = jb[3]
+    ab[10] = jb[4]
+    ab[11] = jb[5]
+    
+    outval = a / k
+    
+    rb[0] = ob[2]
+    rb[1] = ob[3]
+    rb[2] = ob[4]
+    rb[3] = ob[5]
+    rb[4] = ob[6]
+    rb[5] = ob[7]
+
+    return retval    
+end function
+
+
+
+function i2f4_from(sbyte*2 in ip, byte*4 in fp) return sbyte*6 is
+    --pragma inline
+    var byte ibytes[2] at ip
+    var byte fbytes[4] at fp
+    var sbyte*6 outval 
+    var byte outbytes[6] at outval
+    outbytes[0] = fbytes[0]
+    outbytes[1] = fbytes[1]
+    outbytes[2] = fbytes[2]
+    outbytes[3] = fbytes[3]
+    outbytes[4] = ibytes[0]
+    outbytes[5] = ibytes[1]
+    return outval
+end function
+
+
+
+const byte i2f4_one[6] = {0x00,0x00, 0x00,0x00,0x01,0x00}
+const byte i2f4_two[6] = {0x00,0x00, 0x00,0x00,0x02,0x00}
+
+
+var sbyte*6 proportional_constant = sbyte*6(i2f4_one)
+var sbyte*6 integration_time      = i2f4_from(10, 0)
+var sbyte*6 differentiation_time  = i2f4_from(5, 0)
+var sbyte*6 alpha                 = i2f4_from(0, 0x19999999)
+var sbyte*6 beta                  = sbyte*6(i2f4_one)
+var sbyte*6 gamma                 = 0
+var sbyte*6 filter_time           = i2f4_mul(alpha, differentiation_time)
+var sbyte*6 output_value          = 0
+var sbyte*6 last_last_error_d_f   = 0
+var sbyte*6 last_error_d_f        = 0
+var sbyte*6 last_error_p          = 0
+var sbyte*6 lasttime              = 0
+
+
+function now return sbyte*6 is
+	return lasttime + sbyte*6(i2f4_one)
+end function
+
+function get_process_value return sbyte*6 is
+	return 0
+end function
+
+procedure update_pid (sbyte*6 in new_setpoint) is
+	-- ideas from http://www.flightgear.org/Docs/XMLAutopilot/node3.html#SECTION00031000000000000000
+	var sbyte*6 curtime = now()
+	var sbyte*6 curval = get_process_value()
+	var sbyte*6 delta_t = i2f4_sub(curtime, lasttime)
+	var sbyte*6 d_factor1 = i2f4_div(delta_t, filter_time)
+	var sbyte*6 d_factor2 = i2f4_add(d_factor1, sbyte*6(i2f4_one))
+	var sbyte*6 d_factor3 = i2f4_div(d_factor1, d_factor2)
+	var sbyte*6 error = new_setpoint - curval
+	var sbyte*6 error_p = i2f4_mul(beta, new_setpoint) - curval
+	var sbyte*6 error_d = i2f4_mul(gamma, new_setpoint) - curval
+	var sbyte*6 error_d_f = (i2f4_div(last_error_d_f, d_factor2) + 
+                                i2f4_mul(error_d, d_factor3))
+    var sbyte*6 output_delta = i2f4_mul(proportional_constant,
+                                        ( (error_p - last_error_p)  
+                                        + i2f4_mul( 
+                                            i2f4_div( delta_t,integration_time),
+                                            error
+                                            )
+                                        + i2f4_mul( 
+                                            i2f4_div( differentiation_time, delta_t) ,
+                                            (error_d_f
+                                                - i2f4_mul(
+                                                    sbyte*6(i2f4_two),
+                                                    last_error_d_f
+                                                    )
+                                                + last_last_error_d_f
+                                                )
+                                                )
+                                            )
+                                        )
+	last_last_error_d_f = last_error_d_f
+	last_error_d_f = error_d_f
+	last_error_p = error_p
+	lasttime = curtime
+	output_value = output_value + output_delta	
+end procedure
+
+
+function bigdivide(byte*4 in y, byte*4 in x) return byte*8 is
+	return byte*8(y<<(4*8)) / x
+end function
+
+
+procedure i2f4_format(byte out device, sbyte*6 in val) is
+    var sbyte*2 buf1
+    var byte*4 buf2
+    var byte buf1b[2] at buf1
+    var byte buf2b[4] at buf2
+    var byte b[6] at val
+    
+    buf2b[0] = b[0]
+    buf2b[1] = b[1]
+    buf2b[2] = b[2]
+    buf2b[3] = b[3]
+    buf1b[0] = b[4]
+    buf1b[1] = b[5]
+    
+    format_word_hex(serial_hw_data, buf1)
+    serial_hw_data = "."
+    format_dword_hex(serial_hw_data, buf2)
+end procedure 
+
+forever loop
+    var sbyte*6 t1, t2, t3
+    t1 = i2f4_from(0x0003, 0x80000000)
+    t2 = i2f4_from(0x0007, 0x08000000)
+    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t1)  
+    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t2)  
+    
+    t3 = i2f4_mul(t1, t2)
+    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t3)
+
+    t1 = i2f4_div(t3, t2)    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t1)
+    
+    update_pid(t1)
+    serial_hw_write("\n")
+    serial_hw_write(">")
+    var sbyte*2 buf1
+    var byte*4 buf2
+    var byte buf1b[2] at buf1
+    var byte buf2b[4] at buf2
+    var byte output_valueb[6] at output_value
+    
+    i2f4_format(serial_hw_data, output_value)
+    serial_hw_write("\n")
+end loop

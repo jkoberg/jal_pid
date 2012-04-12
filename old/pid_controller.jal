@@ -1,0 +1,222 @@
+
+-- Check parameter values for corruption
+-- If corrupt, go to idle state
+-- If not corrupt, read them and go to running state
+
+
+-- Idle state: 
+
+--
+
+include 16f88
+pragma target wdt disabled
+pragma target osc INTOSC_NOCLKOUT
+pragma target clock 8_000_000
+
+const usart_hw_serial = true	-- true = RS232, false = SPI
+const serial_hw_baudrate = 9600
+include serial_hardware
+serial_hw_init()
+serial_hw_write("!")
+serial_hw_write("\n")
+
+include format
+
+
+
+
+
+function i2f4_int (sbyte*6 in j) return sbyte*2 is
+	return j >> (4*8)
+end function
+
+function i2f4_frac (sbyte*6 in j) return byte*4 is
+	return j & 0xffffffff
+end function
+
+function i2f4_add (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+	return j + k
+end function
+
+
+function i2f4_sub (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+	return j - k
+end function
+
+
+function i2f4_mul (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+	var sbyte*12 product
+    var byte p[12] at product
+    
+    var sbyte*6 outval
+    var byte o[6] at outval
+    
+    
+    -- p[0] thru p[3] are lost digits of fractional precision
+    product = sbyte*12(j) * sbyte*12(k)
+
+    o[0] = p[4] 
+    o[1] = p[5] 
+    o[2] = p[6] 
+    o[3] = p[7] 
+    o[4] = p[8] 
+    o[5] = p[9]
+    --if p[10] != 0 or p[11] != 0 then  
+    --end if
+	return outval
+end function
+
+function i2f4_div (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    var byte jb[6] at j
+    var sbyte*12 acc = 0
+    var byte ab[12] at acc
+    
+    var sbyte*12 outval
+    var byte ob[12] at outval
+
+    var sbyte*6 retval
+    var byte rb[6] at retval 
+    
+    ab[6] = jb[0]
+    ab[7] = jb[1]
+    ab[8] = jb[2]
+    ab[9] = jb[3]
+    ab[10] = jb[4]
+    ab[11] = jb[5]
+    
+    outval = acc / k
+    
+    rb[0] = ob[2]
+    rb[1] = ob[3]
+    rb[2] = ob[4]
+    rb[3] = ob[5]
+    rb[4] = ob[6]
+    rb[5] = ob[7]
+    
+    --for 12 using ctr loop
+    --   format_byte_hex(serial_hw_data, ob[ctr])
+    --end loop
+    return retval    
+end function
+
+
+
+
+
+
+var sdword proportional_constant = 0 --divide32(1, 1)
+var sdword integration_time = 0 --divide32(1,1)
+var sdword differentiation_time = 0 --divide32(1,1)
+var sdword alpha = 0 --divide32(1,10)
+var sdword beta = 0 --divide32(1,1)
+var sdword gamma = 0 --divide32(0,0)
+var sdword filter_time = 0 --alpha * differentiation_time
+var sdword output_value = 0 --0.0
+var sdword last_last_error_d_f = 0 --0.0
+var sdword last_error_d_f = 0 --0.0
+var sdword last_error_p = 0 --0.0
+var sdword lasttime = 0 --now()
+
+
+function now return sword is
+	return 0
+end function
+
+function get_process_value return sword is
+	return 0
+end function
+
+procedure update_pid (sdword in new_setpoint) is
+	-- ideas from http://www.flightgear.org/Docs/XMLAutopilot/node3.html#SECTION00031000000000000000
+	var sdword curtime
+	var sdword curval
+	var sdword delta_t
+	var sdword error
+	var sdword error_p
+	var sdword error_d
+	var sdword error_d_f
+	var sdword d_factor1
+	var sdword d_factor2
+	var sdword d_factor3
+	var sdword output_delta
+	
+	curtime = now()
+	curval = get_process_value()
+	delta_t = curtime - lasttime
+	d_factor1 = delta_t / filter_time
+	d_factor2 = d_factor1 + 1
+	d_factor3 = d_factor1 / d_factor2
+	error = new_setpoint - curval
+	error_p = beta * new_setpoint - curval
+	error_d = gamma * new_setpoint - curval
+	error_d_f = ( (last_error_d_f / d_factor2) + 
+		  (error_d * d_factor3) 
+		   )
+	output_delta = proportional_constant * (
+		  (error_p - last_error_p) + 
+		  ((delta_t/integration_time) * error) + 
+		  (differentiation_time/delta_t) * (error_d_f - (2 * last_error_d_f) + last_last_error_d_f)
+		  )
+	last_last_error_d_f = last_error_d_f
+	last_error_d_f = error_d_f
+	last_error_p = error_p
+	lasttime = curtime
+	output_value = output_value + output_delta	
+end procedure
+
+
+function bigdivide(byte*4 in y, byte*4 in x) return byte*8 is
+	return byte*8(y<<(4*8)) / x
+end function
+
+
+
+function i2f4_from(sbyte*2 in i, byte*4 in f) return sbyte*6 is
+    var byte ibytes[2] at i
+    var byte fbytes[4] at f
+    var sbyte*6 outval 
+    var byte outbytes[6] at outval
+    outbytes[0] = fbytes[0]
+    outbytes[1] = fbytes[1]
+    outbytes[2] = fbytes[2]
+    outbytes[3] = fbytes[3]
+    outbytes[4] = ibytes[0]
+    outbytes[5] = ibytes[1]
+    return outval
+end function
+
+
+procedure i2f4_format(byte out device, sbyte*6 in val) is
+    var byte ctr
+    var byte b[6] at val
+    for 6  using ctr loop
+        format_byte_hex(serial_hw_data, b[ctr])
+    --end loop
+    --serial_hw_data = "."
+    --for 4  using ctr loop
+    --    format_byte_hex(serial_hw_data, b[ctr+2])
+    end loop
+end procedure 
+
+
+forever loop
+    var sbyte*6 t1, t2, t3
+    t1 = i2f4_from(0x0003, 0x80000000)
+    t2 = i2f4_from(0x0007, 0x08000000)
+    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t1)  
+    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t2)  
+    
+    t3 = i2f4_mul(t1, t2)
+    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t3)
+
+    t1 = i2f4_div(t3, t2)    
+    serial_hw_write("\n")
+    i2f4_format(serial_hw_data, t1)  
+    
+end loop

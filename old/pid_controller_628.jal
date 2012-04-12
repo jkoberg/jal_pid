@@ -1,0 +1,108 @@
+
+-- Check parameter values for corruption
+-- If corrupt, go to idle state
+-- If not corrupt, read them and go to running state
+
+
+-- Idle state: 
+
+--
+
+include 16f88
+pragma target wdt disabled
+pragma target osc INTOSC_NOCLKOUT
+pragma target clock 8_000_000
+
+const usart_hw_serial = true	-- true = RS232, false = SPI
+const serial_hw_baudrate = 9600
+include serial_hardware
+serial_hw_init()
+serial_hw_write("O")
+serial_hw_write("K")
+serial_hw_write("\n")
+
+include format
+
+
+const byte FXWIDTH = 4
+const byte FXFRACBITS  = 20
+-- 12-bit integer part and a 20-bit fractional part.
+-- So range -2047..2047 and about 6 decimal digits of precision.
+include fixedpoint
+
+
+var sbyte*FXWIDTH proportional_constant = word_to_fx(4)
+var sbyte*FXWIDTH integration_time      = word_to_fx(10)
+var sbyte*FXWIDTH differentiation_time  = word_to_fx(10)
+var sbyte*FXWIDTH alpha                 = fx_01
+var sbyte*FXWIDTH beta                  = fx_one
+var sbyte*FXWIDTH gamma                 = 0
+var sbyte*FXWIDTH filter_time           = mult_fx(alpha, differentiation_time)
+var sbyte*FXWIDTH output_value          = 0
+var sbyte*FXWIDTH last_last_error_d_f   = 0
+var sbyte*FXWIDTH last_error_d_f        = 0
+var sbyte*FXWIDTH last_error_p          = 0
+var sbyte*FXWIDTH lasttime              = 0
+
+
+function now return sbyte*FXWIDTH is
+	return lasttime + fx_one
+end function
+
+function get_process_value return sbyte*FXWIDTH is
+	return 0x00010000
+end function
+
+procedure update_pid (sbyte*FXWIDTH in new_setpoint) is
+	-- ideas from http://www.flightgear.org/Docs/XMLAutopilot/node3.html#SECTION00031000000000000000
+	var sbyte*FXWIDTH curtime = now()
+	var sbyte*FXWIDTH curval = get_process_value()
+	var sbyte*FXWIDTH delta_t = curtime - lasttime
+	var sbyte*FXWIDTH d_factor1 = div_fx(delta_t, filter_time)
+	var sbyte*FXWIDTH d_factor2 = d_factor1 + fx_one
+	var sbyte*FXWIDTH d_factor3 = div_fx(d_factor1, d_factor2)
+	var sbyte*FXWIDTH error = new_setpoint - curval
+	var sbyte*FXWIDTH error_p = mult_fx(beta, new_setpoint) - curval
+	var sbyte*FXWIDTH error_d = mult_fx(gamma, new_setpoint) - curval
+	var sbyte*FXWIDTH error_d_f = (div_fx(last_error_d_f, d_factor2) + 
+                                mult_fx(error_d, d_factor3))
+    var sbyte*FXWIDTH output_delta = mult_fx(proportional_constant,
+                                        ( (error_p - last_error_p)  
+                                        + mult_fx( 
+                                            div_fx( delta_t,integration_time),
+                                            error
+                                            )
+                                        + mult_fx( 
+                                            div_fx( differentiation_time, delta_t) ,
+                                            (error_d_f
+                                                - mult_fx(
+                                                    fx_two,
+                                                    last_error_d_f
+                                                    )
+                                                + last_last_error_d_f
+                                                )
+                                                )
+                                            )
+                                        )
+	last_last_error_d_f = last_error_d_f
+	last_error_d_f = error_d_f
+	last_error_p = error_p
+	lasttime = curtime
+	output_value = output_value + output_delta	
+end procedure
+
+
+
+forever loop
+    var sbyte*FXWIDTH t1
+    t1 = 0x00111125 
+   
+    update_pid(t1)
+    
+    serial_hw_write("\n")
+    format_fx(serial_hw_data, output_value)
+    serial_hw_write("\n")
+    format_fx_hex(serial_hw_data, output_value)
+        
+    
+end loop

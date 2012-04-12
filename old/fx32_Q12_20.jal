@@ -1,0 +1,58 @@
+
+-- these routines use a 12-bit integer part and a 20-bit fractional part.
+-- So range -2047..2047 and about 6 decimal digits of precision.
+
+
+const byte WIDTH = 4
+const byte FRACBITS  = 20
+const byte DOUBLE = 2*WIDTH
+const byte HALF = WIDTH/2
+const byte WORDSIZE = (WIDTH*8)
+
+
+
+
+function word_to_fx32(sbyte*HALF in int) return sbyte*WIDTH is
+    pragma inline
+    return ((sbyte*WIDTH(int)) << FRACBITS)
+end function
+
+
+
+function trunc_fx32(sbyte*WIDTH in fx32_point) return sbyte*HALF  is
+    pragma inline
+    return (sbyte*HALF(fx32_point >> FRACBITS))    
+end function
+
+
+
+function round_fx32(sbyte*WIDTH in fx32_point) return sbyte*HALF  is
+    if (fx32_point & (1 << (FRACBITS-1) )) >0  then    -- >= 0.5
+      return ( sbyte*HALF(fx32_point >> FRACBITS) +1)
+   else
+      return ( sbyte*HALF(fx32_point >> FRACBITS))
+   end  if
+end function
+
+
+
+function mult_fx32(sbyte*DOUBLE in a, sbyte*DOUBLE in b) return sbyte*WIDTH is
+   return sbyte*WIDTH((a * b) >> FRACBITS) -- fix point
+end function
+
+
+
+function div_fx32(sbyte*DOUBLE in a, sbyte*DOUBLE in b) return sbyte*WIDTH  is
+    return sbyte*WIDTH( ((a<<WORDSIZE) / b) >> FRACBITS)
+end function
+
+
+const sbyte*WIDTH fx32_one     = 1 << FRACBITS
+const sbyte*WIDTH fx32_two     = 2 << FRACBITS
+const sbyte*WIDTH fx32_ten     = 10 << FRACBITS
+const sbyte*WIDTH fx32_pi      = (dword(0x3243f6a8) >> (28-FRACBITS))
+const sbyte*WIDTH fx32_10th    = (dword(0x19999999) >> (32-FRACBITS))
+const sbyte*WIDTH fx32_100th   = (dword(0x028f5c28) >> (32-FRACBITS))
+const sbyte*WIDTH fx32_1000th  = (dword(0x00418937) >> (32-FRACBITS))
+
+

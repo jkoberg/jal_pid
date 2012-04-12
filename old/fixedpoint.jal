@@ -1,0 +1,444 @@
+--
+--  Fixed Point Arithmetic Library for JALv2
+--    Written by Joe Koberg. Copyright 2011. 
+--    This code is released under the terms of the GPLv2. 
+--    Find the full license text at http://www.gnu.org/licenses/gpl-2.0.html
+--
+--
+--     -- if FXWIDTH and FXFRACBITS are not defined they will
+--     -- default to 4 bytes, and 1/2 of the FXWIDTH, respectively.
+--     const byte FXWIDTH = 4
+--     const byte FXFRACBITS  = 20
+--     include fixedpoint
+--
+--     -- Fixed-point values must be of type "sbyte*FXWIDTH"
+--     var sbyte*FXWIDTH some_value
+--     var sbyte*FXWIDTH other_value
+--
+--     -- word_to_fx() will convert an integer into a fixedpoint. 
+--     some_value = word_to_fx(314)
+--     other_value = div_fx(some_value, fx_100)
+--
+--   Subtraction and addition are handled with the normal JAL
+--   arithmetic operators. 
+--
+--   Mutliplication and division must be performed via
+--   the mult_fx() and div_fx() functions to handle the
+--   radix point.
+--   
+
+
+
+if !defined(FXWIDTH) then
+    const byte FXWIDTH = 4
+end if
+
+const byte FXDOUBLE = 2*FXWIDTH
+const byte FXHALF = FXWIDTH/2
+
+const byte FXWORDSIZE = (FXWIDTH*8)
+
+if !defined(FXFRACBITS) then
+    const byte FXFRACBITS = (FXWORDSIZE/2)
+end if
+
+const byte FXINTBITS = (FXWORDSIZE - FXFRACBITS)
+
+
+function word_to_fx(sbyte*FXHALF in int) return sbyte*FXWIDTH is
+    pragma inline
+    return ((sbyte*FXWIDTH(int)) << FXFRACBITS)
+end function
+
+
+
+function trunc_fx(sbyte*FXWIDTH in fx_point) return sbyte*FXHALF  is
+    pragma inline
+    return (sbyte*FXHALF(fx_point >> FXFRACBITS))    
+end function
+
+
+
+function round_fx(sbyte*FXWIDTH in fx_point) return sbyte*FXHALF  is
+    if (fx_point & (1 << (FXFRACBITS-1) )) >0  then    -- >= 0.5
+      return ( sbyte*FXHALF(fx_point >> FXFRACBITS) +1)
+   else
+      return ( sbyte*FXHALF(fx_point >> FXFRACBITS))
+   end  if
+end function
+
+
+
+function mult_fx(sbyte*FXDOUBLE in a, sbyte*FXDOUBLE in b) return sbyte*FXWIDTH is
+   return sbyte*FXWIDTH((a * b) >> FXFRACBITS) -- fix point
+end function
+
+
+
+function div_fx(sbyte*FXDOUBLE in a, sbyte*FXDOUBLE in b) return sbyte*FXWIDTH  is
+    return sbyte*FXWIDTH( ((a<<FXWORDSIZE) / b) >> FXFRACBITS)
+end function
+
+
+const sbyte*FXWIDTH fx_one          = (sbyte*FXWIDTH(1) << FXFRACBITS)
+const sbyte*FXWIDTH fx_two          = (sbyte*FXWIDTH(2) << FXFRACBITS)
+const sbyte*FXWIDTH fx_ten          = (sbyte*FXWIDTH(10) << FXFRACBITS)
+const sbyte*FXWIDTH fx_pi           = ((sbyte*FXWIDTH(3) << FXFRACBITS) + (sbyte*FXWIDTH(0x243f6a88) >> (FXINTBITS)))
+
+
+
+-- for p in range(-9, 0):
+--     v = 10.0**p
+--     fracdiv = 2.0**32
+--     i = v * fracdiv
+--     i = int(math.floor(i))
+--     zeros = "0" * -p
+--     print ("""
+--     if (0x%08x >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+--         const sbyte*FXWIDTH fx_%s1   = (sbyte*FXWIDTH(0x%08x) >> (FXINTBITS))
+--         _WARN "10^%d"
+--     end if
+--     """%(i, zeros, i, p))
+-- 
+-- for p in range(0, 10):
+--     i = 10**p
+--     zeros = "0" * p
+--     print ("""
+--     if (0x%08x < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+--         const sbyte*FXWIDTH fx_1%s   = (sbyte*FXWIDTH(0x%08x) << (FXFRACBITS))
+--         _WARN "10^%d"
+--     end if
+--     """%(i, zeros, i, p))
+-- 
+-- 
+
+
+
+if (0x00000004 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_0000000001   = (sbyte*FXWIDTH(0x00000004) >> (FXINTBITS))
+    _WARN "10^-9"
+end if
+
+
+if (0x0000002a >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_000000001   = (sbyte*FXWIDTH(0x0000002a) >> (FXINTBITS))
+    _WARN "10^-8"
+end if
+
+
+if (0x000001ad >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_00000001   = (sbyte*FXWIDTH(0x000001ad) >> (FXINTBITS))
+    _WARN "10^-7"
+end if
+
+
+if (0x000010c6 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_0000001   = (sbyte*FXWIDTH(0x000010c6) >> (FXINTBITS))
+    _WARN "10^-6"
+end if
+
+
+if (0x0000a7c5 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_000001   = (sbyte*FXWIDTH(0x0000a7c5) >> (FXINTBITS))
+    _WARN "10^-5"
+end if
+
+
+if (0x00068db8 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_00001   = (sbyte*FXWIDTH(0x00068db8) >> (FXINTBITS))
+    _WARN "10^-4"
+end if
+
+
+if (0x00418937 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_0001   = (sbyte*FXWIDTH(0x00418937) >> (FXINTBITS))
+    _WARN "10^-3"
+end if
+
+
+if (0x028f5c28 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_001   = (sbyte*FXWIDTH(0x028f5c28) >> (FXINTBITS))
+    _WARN "10^-2"
+end if
+
+
+if (0x19999999 >= (sbyte*FXWIDTH(1)<<(FXINTBITS+1))) then
+    const sbyte*FXWIDTH fx_01   = (sbyte*FXWIDTH(0x19999999) >> (FXINTBITS))
+    _WARN "10^-1"
+end if
+
+
+if (0x00000001 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_1   = (sbyte*FXWIDTH(0x00000001) << (FXFRACBITS))
+    _WARN "10^0"
+end if
+
+
+if (0x0000000a < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_10   = (sbyte*FXWIDTH(0x0000000a) << (FXFRACBITS))
+    _WARN "10^1"
+end if
+
+
+if (0x00000064 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_100   = (sbyte*FXWIDTH(0x00000064) << (FXFRACBITS))
+    _WARN "10^2"
+end if
+
+
+if (0x000003e8 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_1000   = (sbyte*FXWIDTH(0x000003e8) << (FXFRACBITS))
+    _WARN "10^3"
+end if
+
+
+if (0x00002710 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_10000   = (sbyte*FXWIDTH(0x00002710) << (FXFRACBITS))
+    _WARN "10^4"
+end if
+
+
+if (0x000186a0 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_100000   = (sbyte*FXWIDTH(0x000186a0) << (FXFRACBITS))
+    _WARN "10^5"
+end if
+
+
+if (0x000f4240 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_1000000   = (sbyte*FXWIDTH(0x000f4240) << (FXFRACBITS))
+    _WARN "10^6"
+end if
+
+
+if (0x00989680 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_10000000   = (sbyte*FXWIDTH(0x00989680) << (FXFRACBITS))
+    _WARN "10^7"
+end if
+
+
+if (0x05f5e100 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_100000000   = (sbyte*FXWIDTH(0x05f5e100) << (FXFRACBITS))
+    _WARN "10^8"
+end if
+
+
+if (0x3b9aca00 < (sbyte*FXWIDTH(1)<<(FXINTBITS-1))) then
+    const sbyte*FXWIDTH fx_1000000000   = (sbyte*FXWIDTH(0x3b9aca00) << (FXFRACBITS))
+    _WARN "10^9"
+end if
+
+procedure format_fx_hex(volatile byte out device, sbyte*FXWIDTH in val) is
+    var byte b[FXWIDTH] at val
+    var byte ctr
+    for FXWIDTH using ctr loop
+        format_byte_hex(device, b[ctr])
+    end loop
+end procedure
+
+procedure format_fx(volatile byte out device, sbyte*FXWIDTH in val) is
+    var byte c
+    
+    if val < 0 then
+        device = "-"
+        val = -val
+    end if
+    
+    if (defined(fx_1000000000)) then
+        c = "0"
+        while val > fx_1000000000 loop
+            c = c + 1
+            val = val - fx_1000000000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_100000000)) then
+        c = "0"
+        while val > fx_100000000 loop
+            c = c + 1
+            val = val - fx_100000000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_10000000)) then
+        c = "0"
+        while val > fx_10000000 loop
+            c = c + 1
+            val = val - fx_10000000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_1000000)) then
+        c = "0"
+        while val > fx_1000000 loop
+            c = c + 1
+            val = val - fx_1000000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_100000)) then
+        c = "0"
+        while val > fx_100000 loop
+            c = c + 1
+            val = val - fx_100000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_10000)) then
+        c = "0"
+        while val > fx_10000 loop
+            c = c + 1
+            val = val - fx_10000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_1000)) then
+        c = "0"
+        while val > fx_1000 loop
+            c = c + 1
+            val = val - fx_1000
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_100)) then
+        c = "0"
+        while val > fx_100 loop
+            c = c + 1
+            val = val - fx_100
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    if (defined(fx_10)) then
+        c = "0"
+        while val > fx_10 loop
+            c = c + 1
+            val = val - fx_10
+        end loop
+        if c > "0" then
+            device = c
+        end if
+    end if
+    
+    
+    if (defined(fx_1)) then
+        c = "0"
+        while val > fx_1 loop
+            c = c + 1
+            val = val - fx_1
+        end loop
+        device = c
+    end if
+    
+    device = "."
+    
+    
+    if (defined(fx_01)) then
+        c = "0"
+        while val > fx_01 loop
+            c = c + 1
+            val = val - fx_01
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_001)) then
+        c = "0"
+        while val > fx_001 loop
+            c = c + 1
+            val = val - fx_001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_0001)) then
+        c = "0"
+        while val > fx_0001 loop
+            c = c + 1
+            val = val - fx_0001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_00001)) then
+        c = "0"
+        while val > fx_00001 loop
+            c = c + 1
+            val = val - fx_00001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_000001)) then
+        c = "0"
+        while val > fx_000001 loop
+            c = c + 1
+            val = val - fx_000001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_0000001)) then
+        c = "0"
+        while val > fx_0000001 loop
+            c = c + 1
+            val = val - fx_0000001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_00000001)) then
+        c = "0"
+        while val > fx_00000001 loop
+            c = c + 1
+            val = val - fx_00000001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_000000001)) then
+        c = "0"
+        while val > fx_000000001 loop
+            c = c + 1
+            val = val - fx_000000001
+        end loop
+        device = c
+    end if
+    
+    if (defined(fx_0000000001)) then
+        c = "0"
+        while val > fx_0000000001 loop
+            c = c + 1
+            val = val - fx_0000000001
+        end loop
+        device = c
+    end if
+    
+    
+end procedure 
+
+
+
+

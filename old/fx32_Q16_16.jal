@@ -1,0 +1,46 @@
+
+
+
+function word_to_fx32(word in int) return sdword is
+    pragma inline
+    return ((sdword(int)) << 16)
+end function
+
+
+
+function trunc_fx32(sdword in fx32_point) return sword  is
+    pragma inline
+    return (sword(fx32_point >> 16))    
+end function
+
+
+
+function round_fx32(sdword in fx32_point) return sword  is
+   if ((fx32_point & 0x8000) >0)  then    -- 0x8000 and more >= 0.5
+      return ( sword(fx32_point >> 16) +1)
+   else
+      return ( sword(fx32_point >> 16))
+   end  if
+end function
+
+
+
+function mult_fx32(sbyte*8 in a, sbyte*8 in b) return sdword is
+   return sdword((a * b) >> 16) -- fix point
+end function
+
+
+
+function div_fx32(sbyte*8 in a, sbyte*8 in b) return sdword  is
+    return sdword( ((a<<32) / b) >> 16)
+end function
+
+
+
+const sdword fx32_one     = 0x0001_0000
+const sdword fx32_two     = 0x0002_0000
+const sdword fx32_pi      = 0x0003_243f
+const sdword fx32_10th    = 0x0000_1999 
+const sdword fx32_100th   = 0x0000_028f
+const sdword fx32_1000th  = 0x0000_0041
+

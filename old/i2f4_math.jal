@@ -1,0 +1,92 @@
+
+function julery_isqrt (dword in val) return dword  is
+    var dword temp, g=0, b = 0x8000, bshift = 15
+    repeat
+        temp = ((( g << 1) + b) << bshift)
+        bshift = bshift - 1 
+        if (val >= (temp)) then
+            g = g + b
+            val = val - temp
+        end if
+        b = b >> 1
+    until (b==0)
+    return g
+end function
+
+
+function i2f4_add (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    pragma inline
+	return j + k
+end function
+
+
+function i2f4_sub (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    pragma inline
+	return j - k
+end function
+
+
+function i2f4_mul (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+	var sbyte*12 product
+    var byte p[12] at product
+    var sbyte*6 outval
+    var byte o[6] at outval
+    product = sbyte*12(j) * sbyte*12(k)
+    o[0] = p[4] 
+    o[1] = p[5] 
+    o[2] = p[6] 
+    o[3] = p[7] 
+    o[4] = p[8] 
+    o[5] = p[9]
+	return outval
+end function
+
+function i2f4_div (sbyte*6 in j, sbyte*6 in k) return sbyte*6 is
+    var byte jb[6] at j
+    
+    var sbyte*12 a = 0
+    var byte ab[12] at a
+    
+    var sbyte*12 outval
+    var byte ob[12] at outval
+
+    var sbyte*6 retval
+    var byte rb[6] at retval 
+    
+    ab[6] = jb[0]
+    ab[7] = jb[1]
+    ab[8] = jb[2]
+    ab[9] = jb[3]
+    ab[10] = jb[4]
+    ab[11] = jb[5]
+    
+    outval = a / k
+    
+    rb[0] = ob[2]
+    rb[1] = ob[3]
+    rb[2] = ob[4]
+    rb[3] = ob[5]
+    rb[4] = ob[6]
+    rb[5] = ob[7]
+
+    return retval    
+end function
+
+
+
+function i2f4_from(sbyte*2 in ip, byte*4 in fp) return sbyte*6 is
+    --pragma inline
+    var byte ibytes[2] at ip
+    var byte fbytes[4] at fp
+    var sbyte*6 outval 
+    var byte outbytes[6] at outval
+    outbytes[0] = fbytes[0]
+    outbytes[1] = fbytes[1]
+    outbytes[2] = fbytes[2]
+    outbytes[3] = fbytes[3]
+    outbytes[4] = ibytes[0]
+    outbytes[5] = ibytes[1]
+    return outval
+end function
+
+
