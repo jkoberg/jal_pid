@@ -3,8 +3,8 @@
 
 VAR BYTE*6 zero_crossing_count = 0
 
-VAR SBYTE*2 heater_accum = 0x0000
-VAR SBYTE*2 heater_setting = 0x1111
+VAR BYTE*2 heater_accum = 0x0000
+VAR BYTE*2 heater_setting = 0x0000
 
 pin_A1_direction = output
 
