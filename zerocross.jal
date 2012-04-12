@@ -30,22 +30,23 @@ pin_B4_direction = input
 -- RBIF: 0 = clear RB Port Change interrupt flag
 -- intcon = 0b_1000_1000
 
-procedure enable_ac_zerocross is
-  intcon_rbie = 1
-  --  intcon_peie = 1
-  --  intcon_gie = 1
+procedure zerocross_init is
+  INTCON_RBIF = off
+  INTCON_RBIE = on
+  INTCON_PEIE = on
+  INTCON_GIE = on
 end procedure
 
 procedure zerocross_interrupt is
   pragma interrupt
 
-  if intcon_rbif then
+  if INTCON_RBIF then
     if ac_line_waveform == 0 then -- we are preceding a negative-going transition.
       -- do the breshenham thing
       IF heater_accum < heater_setting THEN
-        heater_switch = 1
+        heater_switch = on
       ELSE
-        heater_switch = 0
+        heater_switch = off
       END IF
       heater_accum = heater_accum - heater_setting
     
