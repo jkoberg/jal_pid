@@ -40,7 +40,7 @@ procedure zerocross_interrupt is
   pragma interrupt
 
   if intcon_rbif then
-    if port_b & 0b00010000 == 0 then -- we are preceding a negative-going transition.
+    if ac_line_waveform == 0 then -- we are preceding a negative-going transition.
       -- do the breshenham thing
       IF heater_accum < heater_setting THEN
         heater_switch = 1
