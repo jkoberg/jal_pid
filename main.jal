@@ -59,6 +59,7 @@ alias led is pin_A0
 led = on
 
 
+
 usb_serial_init()
 
 procedure clear_buffer is    
@@ -148,6 +149,8 @@ set_delay(1, 10000)
 
 var sbyte*FXWIDTH new_setpoint 
 
+
+zerocross_isr_init()
 
 forever loop
     usb_serial_flush()
