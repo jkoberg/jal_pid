@@ -30,7 +30,7 @@ pin_B4_direction = input
 -- RBIF: 0 = clear RB Port Change interrupt flag
 -- intcon = 0b_1000_1000
 
-procedure zerocross_init is
+procedure zerocross_isr_init is
   INTCON_RBIF = off
   INTCON_RBIE = on
   INTCON_PEIE = on
