@@ -23,6 +23,12 @@ pragma target MCLR     EXTERNAL    -- reset externally
 
 
 
+procedure crlf(volatile byte out device) is
+    pragma inline
+    device = 13
+    device = 10
+end procedure
+
 include print
 include format
 include usb_serial
@@ -67,15 +73,13 @@ end procedure
 
 procedure print_buf(volatile byte out device) is
     var byte idx
-    device = 13
-    device = 10
+    crlf(device)
     device = ">"
     for count(input_buffer) using idx loop
         device = input_buffer[idx]
     end loop
     device = "<"
-    device = 13
-    device = 10
+    crlf(device)
 end procedure
 
 
@@ -105,7 +109,7 @@ procedure print_demo(volatile byte out device) is
     for 18 using idx loop
         format_fx8(device, initial)
         crlf(device)
-        initial = div_fx(initial, fx_ten)
+        initial = div_fx(initial, word_to_fx(10))
     end loop
 end procedure
 

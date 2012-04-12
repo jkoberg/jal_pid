@@ -2,13 +2,11 @@
 
 
 var sbyte*FXWIDTH fx_one = word_to_fx(1)
-var sbyte*FXWIDTH fx_two = word_to_fx(2)
-var sbyte*FXWIDTH fx_ten = word_to_fx(10)
 
 
 var sbyte*FXWIDTH proportional_constant = word_to_fx(4)
-var sbyte*FXWIDTH integration_time      = fx_ten
-var sbyte*FXWIDTH differentiation_time  = fx_two
+var sbyte*FXWIDTH integration_time      = word_to_fx(10)
+var sbyte*FXWIDTH differentiation_time  = word_to_fx(2)
 var sbyte*FXWIDTH alpha                 = fx_tensfracs[0]
 var sbyte*FXWIDTH beta                  = fx_one
 var sbyte*FXWIDTH gamma                 = 0
@@ -19,25 +17,27 @@ var sbyte*FXWIDTH last_error_d_f        = 0
 var sbyte*FXWIDTH last_error_p          = 0
 
 
+
+-- if we multiply clock_absolute by (2**32/1000 = 4292967.295 = 0x00418937.4b851eb8) we get fractional secs
+--var sbyte*FXWIDTH now_mult = word_to_fx(4292967)
+--now_mult = now_mult + 0x4b851eb8 
+--return mult_fx(sbyte*8(clock_absolute), now_mult) -- BAD ** accumulates fractional error. 
+
 function now return sbyte*FXWIDTH is
 	return div_fx(sbyte*FXWIDTH(clock_absolute) << FXFRACBITS, word_to_fx(1000))
 end function
 
 
-var sbyte*FXWIDTH lasttime              = now()
+var sbyte*FXWIDTH lasttime = now()
 
 function get_process_value return sbyte*FXWIDTH is
 	return word_to_fx(98)
 end function
 
-procedure crlf(volatile byte out device) is
-    pragma inline
-    device = 13
-    device = 10
-end procedure
 
 procedure update_pid (volatile byte out device, sbyte*FXWIDTH in new_setpoint) is
 	-- ideas from http://www.flightgear.org/Docs/XMLAutopilot/node3.html#SECTION00031000000000000000
+	-- http://en.wikipedia.org/wiki/PID_controller#Discrete_implementation
 	var sbyte*FXWIDTH curtime = now()
 	var sbyte*FXWIDTH curval = get_process_value()
 	var sbyte*FXWIDTH delta_t = curtime - lasttime
@@ -45,8 +45,10 @@ procedure update_pid (volatile byte out device, sbyte*FXWIDTH in new_setpoint) i
 	var sbyte*FXWIDTH d_factor2 = d_factor1 + fx_one
 	var sbyte*FXWIDTH d_factor3 = div_fx(d_factor1, d_factor2)
 	var sbyte*FXWIDTH error = new_setpoint - curval
-	var sbyte*FXWIDTH error_p = mult_fx(beta, (new_setpoint - curval))
-	var sbyte*FXWIDTH error_d = mult_fx(gamma, (new_setpoint - curval))
+	--var sbyte*FXWIDTH error_p = mult_fx(beta, new_setpoint) - curval)
+	var sbyte*FXWIDTH error_p = mult_fx(beta, error)	
+	--var sbyte*FXWIDTH error_d = mult_fx(gamma, new_setpoint) - curval)
+	var sbyte*FXWIDTH error_d = mult_fx(gamma, error)
 	var sbyte*FXWIDTH error_d_f = (div_fx(last_error_d_f, d_factor2) + 
                                 mult_fx(error_d, d_factor3))  
                                 
@@ -64,7 +66,7 @@ procedure update_pid (volatile byte out device, sbyte*FXWIDTH in new_setpoint) i
                                             div_fx( differentiation_time, delta_t) ,
                                             (error_d_f
                                                 - mult_fx(
-                                                    fx_two,
+                                                    word_to_fx(2),
                                                     last_error_d_f
                                                     )
                                                 + last_last_error_d_f
