@@ -11,16 +11,21 @@ VAR BYTE*2 clock_doy = 73 -- range 0 - 366
 VAR BYTE*3 clock_mjd = 56000  
 VAR BYTE*2 clock_year = 2012 -- range 1800 - 2**16
 
+-- (clock defaults to 2012-03-16 Tue, aka MJD 56000)
+
+
+
+ 
 
 
 function is_leap_year(byte*2 in year) return bit is
     if (year & 0b11) == 0b00 then -- divisible by 4.
-        if (year % 100) == 0 then -- unless divisible by 100
-            if (year % 400) == 0 then -- unless divisible by 400
+        if (year % 100) != 0 then -- unless divisible by 100
+            return true
+        else
+            if (year % 400) == 0 then -- but if divisible by 400
                 return true
             end if
-        else
-            return true
         end if
     end if
     return false
@@ -61,6 +66,7 @@ end function
 
 PROCEDURE timer0_isr_wedge() IS
     pragma inline
+    -- This is called in the Timer0 ISR, yielding 1ms precision
     clock_millisecond = clock_millisecond + 1
     clock_absolute = clock_absolute + 1
     IF clock_millisecond > 999 THEN
