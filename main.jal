@@ -33,6 +33,7 @@ include format
 include usb_serial
 
 include clock
+include heater
 include zerocross
 include fx8
 
@@ -147,7 +148,8 @@ set_delay(0, 1000)
 set_delay(1, 10000)
 timer0_isr_init()
 
-zerocross_isr_init()
+
+ac_cycle_isr_init()
 
 
 

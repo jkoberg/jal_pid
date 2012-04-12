@@ -1,0 +1,24 @@
+-- heater.jal
+
+
+
+VAR BYTE*2 heater_accum = 0x0000
+VAR BYTE*2 heater_setting = 0x0000
+
+alias heater_switch is pin_A1
+heater_switch = off
+pin_A1_direction = output
+
+
+procedure ac_cycle_isr_wedge is 
+    pragma inline
+    -- do the breshenham thing
+    IF heater_accum < heater_setting THEN
+        heater_switch = on
+    ELSE
+        heater_switch = off
+    END IF
+    heater_accum = heater_accum - heater_setting
+end procedure
+
+
