@@ -6,23 +6,54 @@ VAR BYTE*6 zero_crossing_count = 0
 VAR BYTE*2 heater_accum = 0x0000
 VAR BYTE*2 heater_setting = 0x0000
 
-pin_A1_direction = output
 
 alias heater_switch is pin_A1
-
 heater_switch = off
+pin_A1_direction = output
 
-PROCEDURE zero_crossing_isr IS
-    -- do the breshenham thing
-    IF heater_accum < heater_setting THEN
+
+alias ac_line_waveform is pin_B4
+pin_B4_direction = input
+
+
+
+
+
+-- Initialize the interrupt control register
+-- GIE:  1 = global interrupts enabled
+-- PEIE: 0 = Peripheral interrupts disabled
+-- T0IE: 0 = TMR0 Overflow interrupt disabled
+-- INTE: 0 = RB0/INT external interrupt disabled
+-- RBIE: 1 = RB Port Change interrupt enabled
+-- T0IF: 0 = clear TMR0 Overflow interupt flag
+-- INTF: 0 = clear RB0/INT external interrupt flag
+-- RBIF: 0 = clear RB Port Change interrupt flag
+-- intcon = 0b_1000_1000
+
+procedure enable_ac_zerocross is
+  intcon_rbie = 1
+  --  intcon_peie = 1
+  --  intcon_gie = 1
+end procedure
+
+procedure zerocross_interrupt is
+  pragma interrupt
+
+  if intcon_rbif then
+    if port_b & 0b00010000 == 0 then -- we are preceding a negative-going transition.
+      -- do the breshenham thing
+      IF heater_accum < heater_setting THEN
         heater_switch = 1
-    ELSE
+      ELSE
         heater_switch = 0
-    END IF
-    heater_accum = heater_accum - heater_setting
+      END IF
+      heater_accum = heater_accum - heater_setting
     
-    -- increment the zero crossing counter
-    zero_crossing_count = zero_crossing_count + 1
-END PROCEDURE
+      -- increment the zero crossing counter
+      zero_crossing_count = zero_crossing_count + 1
+    end if
+    intcon_rbif = off
+  end if
 
 
+end procedure
