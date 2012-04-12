@@ -196,7 +196,16 @@ forever loop
     if check_delay(0) then-- 1hz interrupt for PID
         set_delay(0, 1000)
         new_setpoint = word_to_fx(100)
-        update_pid(usb_serial_data, new_setpoint)
+        update_pid(usb_serial_data, new_setpoint) -- sets output_value
+        if output_value > fx_one then
+            output_value = fx_one
+        end if
+        if output_value < 0 then
+            output_value = 0
+        end if
+        heater_setting = byte*2(mult_fx(output_value, 0xffff) >> FXFRACBITS)
+
+
     end if
     
 end loop
