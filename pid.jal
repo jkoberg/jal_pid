@@ -1,8 +1,6 @@
 
 
 
-var sbyte*FXWIDTH fx_one = word_to_fx(1)
-
 
 var sbyte*FXWIDTH proportional_constant = word_to_fx(4)
 var sbyte*FXWIDTH integration_time      = word_to_fx(10)
