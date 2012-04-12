@@ -143,14 +143,16 @@ const timer0_isr_rate = 1000
 const DELAY_SLOTS = 2
 
 include timer0_isr_interval
-timer0_isr_init()
 set_delay(0, 1000)
 set_delay(1, 10000)
+timer0_isr_init()
+
+zerocross_isr_init()
+
+
 
 var sbyte*FXWIDTH new_setpoint 
 
-
-zerocross_isr_init()
 
 forever loop
     usb_serial_flush()
