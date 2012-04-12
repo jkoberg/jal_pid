@@ -35,6 +35,7 @@ function round_fx(sbyte*FXWIDTH in fx_point) return sbyte*FXHALF  is
 end function
 
 
+-- thank goodness jal has arbitrary precision multiplication and division built in
 
 function mult_fx(sbyte*FXDOUBLE in a, sbyte*FXDOUBLE in b) return sbyte*FXWIDTH is
    return sbyte*FXWIDTH((a * b) >> FXFRACBITS) -- fix point
@@ -48,7 +49,10 @@ end function
 
 
 
+-- 1 times powers of ten
 const sbyte*FXHALF fx_tensints[] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1}
+
+-- 0xffffffff times negative powers of ten
 const sbyte*FXHALF fx_tensfracs[] = {429496729, 42949672, 4294967, 429496, 42949, 4294, 429, 42, 4}
 
 
@@ -59,7 +63,9 @@ procedure format_dword_decfrac(volatile byte out device, dword in data) is
     for 9 using pos loop
         outch = "0"
         while data >= fx_tensfracs[pos] loop
+            -- subtract another unit at this digit position
             data = data - fx_tensfracs[pos]
+            -- increment digit that will be output
             outch = outch + 1
         end loop
         device = outch
