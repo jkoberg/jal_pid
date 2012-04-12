@@ -1,4 +1,3 @@
-
 include 18f2553
 
 -- Compiler directives
@@ -147,6 +146,9 @@ timer0_isr_init()
 set_delay(0, 1000)
 set_delay(1, 10000)
 
+var sbyte*FXWIDTH new_setpoint 
+
+
 forever loop
     usb_serial_flush()
     if( usb_cdc_line_status() !=  0x00 ) then
@@ -191,9 +193,10 @@ forever loop
     end if
     
     
-    if check_delay(0) then -- 1hz interrupt for PID
+    if check_delay(0) then-- 1hz interrupt for PID
         set_delay(0, 1000)
-        update_pid(usb_serial_data, word_to_fx(100))
+        new_setpoint = word_to_fx(100)
+        update_pid(usb_serial_data, new_setpoint)
     end if
     
 end loop
