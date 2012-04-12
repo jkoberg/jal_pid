@@ -1,4 +1,3 @@
-
 const byte FXWIDTH = 8
 
 const byte FXDOUBLE = 2*FXWIDTH
@@ -18,6 +17,10 @@ function word_to_fx(sbyte*FXHALF in int) return sbyte*FXWIDTH is
     pragma inline
     return ((sbyte*FXWIDTH(int)) << FXFRACBITS)
 end function
+
+
+var sbyte*FXWIDTH fx_one = word_to_fx(1)
+
 
 
 function trunc_fx(sbyte*FXWIDTH in fx_point) return sbyte*FXHALF  is
