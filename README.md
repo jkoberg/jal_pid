@@ -1,4 +1,5 @@
-* jal_pid
+
+** jal_pid
 
 JALv2 PID controller with USB communications and fixed-point math for PIC18F (18F2553)
 
@@ -7,7 +8,7 @@ a way to control the heating element, and the ability to do some math to deal wi
 
 ** PICs
 
-The 8-but Microchip PIC microcontrollers are cheap, reliable, very available, and have been well known in the hobbyist electronic
+The 8-bit Microchip PIC microcontrollers are cheap, reliable, very available, and have been well known in the hobbyist electronic
 community since the 80s.  The later parts in the series have a nice set of built-in perhipherals, including a USB transciever.
 the 18F parts have more memory, a more logical memory layout, better performance than their older 10x, 12x, and 16x parts.
 
